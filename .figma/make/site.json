@@ -1,0 +1,10 @@
+{
+  "description": "Effortlessly manage school printouts with a mobile app that allows users to capture, organize by subject, and track submission deadlines.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
