@@ -1,4 +1,14 @@
 import type { Folder, Print, AppNotification, Route } from '../types';
+import { 
+  Search, 
+  Bell, 
+  Camera, 
+  Edit3, 
+  Star, 
+  Clock, 
+  Folder as FolderIcon, 
+  FileText 
+} from 'lucide-react';
 
 interface Props {
   folders: Folder[];
@@ -11,11 +21,12 @@ interface Props {
   onAddClick: () => void;
 }
 
-const TODAY = '2026-09-05';
-
+// 本日の日付を自動で取得する (YYYY-MM-DD形式)
 function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+const TODAY = toDateStr(new Date());
 
 function daysUntil(dateStr: string): number {
   const today = new Date(TODAY);
@@ -40,18 +51,13 @@ export default function HomeScreen({
   onAddClick,
 }: Props) {
   const today = new Date(TODAY);
-  // Week: Mon–Sun containing today
-  const dow = today.getDay();
-  const mondayOffset = dow === 0 ? -6 : 1 - dow;
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
+
+  // 今日を基準にして前後30日分の日付を生成（今日が左〜中央に見えるように調整）
+  const daysRange = Array.from({ length: 30 }, (_, i) => {
     const d = new Date(today);
-    d.setDate(today.getDate() + mondayOffset + i);
+    d.setDate(today.getDate() - 2 + i);
     return d;
   });
-
-  const deadlineDates = new Set(
-    prints.filter((p) => p.dueDate && p.status !== 'submitted').map((p) => p.dueDate!)
-  );
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -66,26 +72,29 @@ export default function HomeScreen({
   const favoriteCount = prints.filter((p) => p.isFavorite).length;
   const pendingCount = prints.filter((p) => p.status === 'pending' && p.dueDate).length;
 
+  // 現在の年月をカレンダーのタイトル用に取得
+  const currentYearMonth = `${today.getFullYear()}年${today.getMonth() + 1}月`;
+
   return (
     <div className="pb-6">
       {/* Header */}
       <div className="px-5 pt-12 pb-4">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-sm font-semibold" style={{ color: '#8B8383' }}>
-            おかえりなさい 👋
-          </p>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-extrabold" style={{ color: '#3F3939' }}>
+            ホーム
+          </h1>
           <div className="flex items-center gap-2">
             <button
               onClick={onSearchClick}
-              className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-lg active:scale-95 transition-all"
+              className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-[#3F3939] active:scale-95 transition-all"
             >
-              🔍
+              <Search size={18} />
             </button>
             <button
               onClick={onNotificationClick}
-              className="relative w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-lg active:scale-95 transition-all"
+              className="relative w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-[#3F3939] active:scale-95 transition-all"
             >
-              🔔
+              <Bell size={18} />
               {unreadCount > 0 && (
                 <span
                   className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-white text-[10px] flex items-center justify-center font-bold"
@@ -97,26 +106,49 @@ export default function HomeScreen({
             </button>
           </div>
         </div>
-        <h1 className="text-2xl font-extrabold" style={{ color: '#3F3939' }}>
-          ホーム
-        </h1>
       </div>
 
-      {/* Week Calendar */}
+      {/* Horizontal Scrollable Calendar */}
       <div className="px-5 mb-5">
         <div className="bg-white rounded-3xl p-4 shadow-sm">
           <p className="text-xs font-bold mb-3" style={{ color: '#8B8383' }}>
-            2026年9月
+            {currentYearMonth} カレンダー
           </p>
-          <div className="grid grid-cols-7 gap-1">
-            {weekDays.map((day, i) => {
+          <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-none">
+            {daysRange.map((day, i) => {
               const ds = toDateStr(day);
               const isToday = ds === TODAY;
-              const hasDeadline = deadlineDates.has(ds);
-              const isSun = i === 0;
-              const isSat = i === 6;
+              const dayPrints = prints.filter((p) => p.dueDate === ds);
+              
+              // ドットの色分けロジック
+              let dotColor = 'transparent';
+              if (dayPrints.length > 0) {
+                const hasUrgent = dayPrints.some(p => p.status === 'pending' && daysUntil(ds) <= 1);
+                const hasPending = dayPrints.some(p => p.status === 'pending');
+                const allSubmitted = dayPrints.every(p => p.status === 'submitted');
+
+                if (hasUrgent) {
+                  dotColor = '#EF4444'; // 期限間近（赤）
+                } else if (hasPending) {
+                  dotColor = '#C8847A'; // 通常の期限（テーマカラー）
+                } else if (allSubmitted) {
+                  dotColor = '#10B981'; // 提出済み（緑）
+                }
+              }
+
+              const isSun = day.getDay() === 0;
+              const isSat = day.getDay() === 6;
+
               return (
-                <div key={i} className="flex flex-col items-center gap-1">
+                <button
+                  key={i}
+                  onClick={() => navigate({ name: 'schedule' })}
+                  className="flex flex-col items-center gap-1 flex-shrink-0 w-12 py-2 rounded-2xl transition-all active:scale-95 hover:bg-[#F8F5F3]"
+                  style={{
+                    backgroundColor: isToday ? '#F8F5F3' : 'transparent',
+                    border: isToday ? '1px solid #C8847A' : '1px solid transparent',
+                  }}
+                >
                   <span
                     className="text-[10px] font-semibold"
                     style={{
@@ -137,10 +169,10 @@ export default function HomeScreen({
                   <div
                     className="w-1.5 h-1.5 rounded-full transition-all"
                     style={{
-                      backgroundColor: hasDeadline ? '#C8847A' : 'transparent',
+                      backgroundColor: dotColor,
                     }}
                   />
-                </div>
+                </button>
               );
             })}
           </div>
@@ -154,15 +186,15 @@ export default function HomeScreen({
         </h2>
         <div className="grid grid-cols-4 gap-2">
           {[
-            { icon: '📷', label: '撮影', action: onAddClick },
-            { icon: '✏️', label: '作成', action: onAddClick },
+            { icon: <Camera size={20} className="text-[#C8847A]" />, label: '撮影', action: onAddClick },
+            { icon: <Edit3 size={20} className="text-[#C8847A]" />, label: '作成', action: onAddClick },
             {
-              icon: '⭐',
+              icon: <Star size={20} className="text-[#EAB308]" />,
               label: `お気に入り (${favoriteCount})`,
               action: () => navigate({ name: 'search' }),
             },
             {
-              icon: '⏰',
+              icon: <Clock size={20} className="text-[#EF4444]" />,
               label: `期限 (${pendingCount})`,
               action: () => navigate({ name: 'schedule' }),
             },
@@ -172,7 +204,9 @@ export default function HomeScreen({
               onClick={action}
               className="flex flex-col items-center gap-2 bg-white rounded-2xl p-3 shadow-sm active:scale-95 transition-all"
             >
-              <span className="text-2xl">{icon}</span>
+              <div className="w-8 h-8 rounded-full bg-[#F8F5F3] flex items-center justify-center">
+                {icon}
+              </div>
               <span
                 className="text-[9px] font-bold text-center leading-tight"
                 style={{ color: '#8B8383' }}
@@ -206,10 +240,10 @@ export default function HomeScreen({
               className="bg-white rounded-2xl p-4 shadow-sm text-left active:scale-95 transition-all"
             >
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-xl mb-2"
+                className="w-10 h-10 rounded-full flex items-center justify-center mb-2 shadow-sm"
                 style={{ backgroundColor: folder.color }}
               >
-                {folder.icon}
+                <FolderIcon size={20} className="text-white drop-shadow-sm" />
               </div>
               <p className="font-extrabold text-sm" style={{ color: '#3F3939' }}>
                 {folder.name}
@@ -249,10 +283,10 @@ export default function HomeScreen({
                   className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3 text-left w-full active:scale-95 transition-all"
                 >
                   <div
-                    className="w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-2xl"
-                    style={{ backgroundColor: print.imageUrls[0] || '#F0D8D5' }}
+                    className="w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-[#C8847A]"
+                    style={{ backgroundColor: '#F8F5F3' }}
                   >
-                    📄
+                    <FileText size={22} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p

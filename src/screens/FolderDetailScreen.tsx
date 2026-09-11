@@ -21,6 +21,9 @@ function fmtDate(dateStr: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}提出`;
 }
 
+type SortType = 'newest' | 'oldest' | 'due-soon' | 'title';
+type FilterTab = 'all' | 'pending' | 'submitted';
+
 export default function FolderDetailScreen({
   folderId,
   folders,
@@ -29,8 +32,44 @@ export default function FolderDetailScreen({
   goBack,
 }: Props) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<SortType>('newest');
+  const [activeTab, setActiveTab] = useState<FilterTab>('all'); // タブ用のステート
+
   const folder = folders.find((f) => f.id === folderId);
   const folderPrints = prints.filter((p) => p.folderId === folderId);
+
+  // ステータス（タブ）による絞り込み
+  const filteredPrints = folderPrints.filter((p) => {
+    const days = p.dueDate ? daysUntil(p.dueDate) : null;
+    const isOverdue = p.status === 'overdue' || (days !== null && days < 0);
+    
+    if (activeTab === 'pending') {
+      return p.status === 'pending' && !isOverdue;
+    }
+    if (activeTab === 'submitted') {
+      return p.status === 'submitted';
+    }
+    return true; // 'all' の場合はすべて
+  });
+
+  // 並び替え処理
+  const sortedPrints = [...filteredPrints].sort((a, b) => {
+    if (sortBy === 'newest') {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+    if (sortBy === 'oldest') {
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    }
+    if (sortBy === 'due-soon') {
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    }
+    if (sortBy === 'title') {
+      return a.title.localeCompare(b.title, 'ja');
+    }
+    return 0;
+  });
 
   if (!folder) return null;
 
@@ -60,7 +99,57 @@ export default function FolderDetailScreen({
               {folderPrints.length}件のプリント
             </p>
           </div>
-          <div className="ml-auto flex items-center gap-2 bg-white rounded-2xl p-1 shadow-sm">
+        </div>
+
+        {/* タブ切り替え（すべて / 未提出 / 提出済み） */}
+        <div className="flex gap-2 mt-4 bg-white p-1 rounded-2xl shadow-sm">
+          <button
+            onClick={() => setActiveTab('all')}
+            className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+            style={{
+              backgroundColor: activeTab === 'all' ? '#C8847A' : 'transparent',
+              color: activeTab === 'all' ? '#fff' : '#8B8383',
+            }}
+          >
+            すべて ({folderPrints.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('pending')}
+            className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+            style={{
+              backgroundColor: activeTab === 'pending' ? '#C8847A' : 'transparent',
+              color: activeTab === 'pending' ? '#fff' : '#8B8383',
+            }}
+          >
+            未提出
+          </button>
+          <button
+            onClick={() => setActiveTab('submitted')}
+            className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+            style={{
+              backgroundColor: activeTab === 'submitted' ? '#C8847A' : 'transparent',
+              color: activeTab === 'submitted' ? '#fff' : '#8B8383',
+            }}
+          >
+            提出済み
+          </button>
+        </div>
+
+        {/* ツールバー（並び替え ＆ 表示切替） */}
+        <div className="flex items-center justify-between mt-3">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortType)}
+            className="px-3 py-2 rounded-xl border text-xs font-semibold outline-none bg-white"
+            style={{ borderColor: '#F0EAE8', color: '#3F3939' }}
+          >
+            <option value="newest">新しい順</option>
+            <option value="oldest">古い順</option>
+            <option value="due-soon">期限が近い順</option>
+            <option value="title">名前順 (タイトル)</option>
+          </select>
+
+          <div className="flex items-center gap-2 bg-white rounded-2xl p-1 shadow-sm">
             <button
               onClick={() => setViewMode('grid')}
               className="w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all"
@@ -87,19 +176,19 @@ export default function FolderDetailScreen({
 
       {/* Prints */}
       <div className="px-5">
-        {folderPrints.length === 0 ? (
+        {sortedPrints.length === 0 ? (
           <div className="bg-white rounded-3xl p-12 shadow-sm text-center">
             <p className="text-4xl mb-4">📄</p>
             <p className="font-bold mb-1" style={{ color: '#3F3939' }}>
-              まだプリントがありません
+              プリントがありません
             </p>
             <p className="text-sm mb-5" style={{ color: '#8B8383' }}>
-              学校でもらったプリントを撮影して登録しましょう。
+              条件に一致するプリントはありません。
             </p>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-2 gap-3">
-            {folderPrints.map((print) => (
+            {sortedPrints.map((print) => (
               <PrintGridCard
                 key={print.id}
                 print={print}
@@ -109,7 +198,7 @@ export default function FolderDetailScreen({
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {folderPrints.map((print) => (
+            {sortedPrints.map((print) => (
               <PrintListCard
                 key={print.id}
                 print={print}

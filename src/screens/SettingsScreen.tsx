@@ -7,17 +7,57 @@ interface Props {
   notifications: AppNotification[];
   navigate: (r: Route) => void;
   goBack: () => void;
+  fontSizeLevel: 1 | 2 | 3;
+  setFontSizeLevel: (level: 1 | 2 | 3) => void;
 }
 
-export default function SettingsScreen({ prints }: Props) {
+const FONT_LABELS = {
+  1: '小',
+  2: '標準',
+  3: '大',
+} as const;
+
+export default function SettingsScreen({ fontSizeLevel, setFontSizeLevel }: Props) {
   const [notify3days, setNotify3days] = useState(true);
   const [notifyDay, setNotifyDay] = useState(true);
   const [notifyToday, setNotifyToday] = useState(true);
-  const [showAbout, setShowAbout] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [showFontModal, setShowFontModal] = useState(false);
 
-  const totalPrints = prints.length;
-  const submittedPrints = prints.filter((p) => p.status === 'submitted').length;
-  const favPrints = prints.filter((p) => p.isFavorite).length;
+  const fontSizeText = FONT_LABELS[fontSizeLevel];
+
+  // スマホ本体への通知許可を求める関数
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      alert('このブラウザはプッシュ通知に対応していません。');
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      alert('通知が許可されました！スマホのロック画面に通知が届くようになります。');
+    } else {
+      alert('通知が拒否されました。ブラウザの設定から許可を変更してください。');
+    }
+  };
+
+  // スマホ本体にテスト通知を飛ばす関数
+  const sendTestNotification = () => {
+    if (!('Notification' in window)) {
+      alert('このブラウザは通知に対応していません。');
+      return;
+    }
+
+    if (Notification.permission === 'granted') {
+      // スマホ本体のロック画面や通知センターに通知を飛ばす
+      new Notification('PrintBox リマインダー', {
+        body: '【数学】二次関数演習プリントの提出期限が明日です！',
+        icon: '/favicon.ico', // 必要に応じてアイコンパス
+      });
+    } else {
+      alert('まずは「通知の許可を有効にする」ボタンを押してください。');
+    }
+  };
 
   return (
     <div className="pb-6">
@@ -31,27 +71,25 @@ export default function SettingsScreen({ prints }: Props) {
         </h1>
       </div>
 
-      {/* Stats card */}
-      <div className="mx-5 mb-5">
-        <div
-          className="rounded-3xl p-5 text-white"
-          style={{ background: 'linear-gradient(135deg, #C8847A 0%, #B06A62 100%)' }}
-        >
-          <p className="text-white/70 text-xs font-bold mb-3">PrintBox 利用状況</p>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center">
-              <p className="text-2xl font-extrabold">{totalPrints}</p>
-              <p className="text-white/70 text-[10px] font-bold mt-0.5">プリント合計</p>
-            </div>
-            <div className="text-center border-x border-white/20">
-              <p className="text-2xl font-extrabold">{submittedPrints}</p>
-              <p className="text-white/70 text-[10px] font-bold mt-0.5">提出済み</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-extrabold">{favPrints}</p>
-              <p className="text-white/70 text-[10px] font-bold mt-0.5">お気に入り</p>
-            </div>
-          </div>
+      {/* 📱 スマホ本体へのプッシュ通知設定セクション */}
+      <div className="px-5 mb-4">
+        <p className="text-xs font-bold mb-2" style={{ color: '#8B8383' }}>
+          スマホ通知の連動
+        </p>
+        <div className="bg-white rounded-3xl shadow-sm p-4 flex flex-col gap-3">
+          <button
+            onClick={requestNotificationPermission}
+            className="w-full py-3 rounded-2xl font-bold text-xs text-white bg-[#C8847A] active:opacity-80 transition-all shadow-sm"
+          >
+            🔔 スマホの通知を許可する
+          </button>
+          <button
+            onClick={sendTestNotification}
+            className="w-full py-3 rounded-2xl font-bold text-xs bg-[#F8F5F3] active:opacity-80 transition-all shadow-sm"
+            style={{ color: '#3F3939' }}
+          >
+            📲 テスト通知をスマホに送る
+          </button>
         </div>
       </div>
 
@@ -84,58 +122,65 @@ export default function SettingsScreen({ prints }: Props) {
         </div>
       </div>
 
-      {/* Data */}
-      <div className="px-5 mb-4">
-        <p className="text-xs font-bold mb-2" style={{ color: '#8B8383' }}>
-          データ管理
-        </p>
-        <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
-          <SettingsRow icon="📤" label="データをエクスポート" sub="JSON形式で書き出す" />
-          <div className="border-t" style={{ borderColor: '#F8F5F3' }} />
-          <SettingsRow icon="📥" label="データをインポート" sub="バックアップから復元" />
-          <div className="border-t" style={{ borderColor: '#F8F5F3' }} />
-          <SettingsRow icon="🗑" label="提出済みをまとめて削除" sub="提出済みプリントを全て削除" danger />
-        </div>
-      </div>
-
       {/* Display */}
       <div className="px-5 mb-4">
         <p className="text-xs font-bold mb-2" style={{ color: '#8B8383' }}>
           表示
         </p>
         <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
-          <SettingsRow icon="🌙" label="ダークモード" sub="近日公開予定" disabled />
+          <ToggleRow
+            label="ダークモード"
+            sub="画面を暗い色にする"
+            checked={darkMode}
+            onChange={setDarkMode}
+          />
           <div className="border-t" style={{ borderColor: '#F8F5F3' }} />
-          <SettingsRow icon="🔤" label="フォントサイズ" sub="標準" />
+          <SettingsRow
+            icon="🔤"
+            label="フォントサイズ"
+            sub={fontSizeText}
+            onClick={() => setShowFontModal(true)}
+          />
         </div>
       </div>
 
-      {/* About */}
-      <div className="px-5">
-        <p className="text-xs font-bold mb-2" style={{ color: '#8B8383' }}>
-          このアプリについて
-        </p>
-        <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
-          <button
-            onClick={() => setShowAbout(!showAbout)}
-            className="flex items-center gap-3 px-5 py-4 w-full text-left active:opacity-70 transition-all"
-          >
-            <span className="text-xl">📦</span>
-            <div className="flex-1">
-              <p className="font-bold text-sm" style={{ color: '#3F3939' }}>PrintBox</p>
-              <p className="text-xs" style={{ color: '#8B8383' }}>バージョン 1.0.0</p>
+      {/* Font Size Slider Modal */}
+      {showFontModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-5">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-xs shadow-lg">
+            <p className="font-extrabold text-base mb-2 text-center" style={{ color: '#3F3939' }}>
+              フォントサイズ
+            </p>
+            <p className="text-xs text-center mb-6 font-bold" style={{ color: '#C8847A' }}>
+              現在: {fontSizeText}
+            </p>
+
+            <div className="px-2 mb-6">
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="1"
+                value={fontSizeLevel}
+                onChange={(e) => setFontSizeLevel(Number(e.target.value) as 1 | 2 | 3)}
+                className="w-full accent-[#C8847A] cursor-pointer h-2 bg-[#F8F5F3] rounded-lg"
+              />
+              <div className="flex justify-between text-[11px] font-bold mt-3" style={{ color: '#8B8383' }}>
+                <span>小</span>
+                <span className="text-[#C8847A]">標準</span>
+                <span>大</span>
+              </div>
             </div>
-            <span style={{ color: '#8B8383' }}>{showAbout ? '▲' : '▼'}</span>
-          </button>
-          {showAbout && (
-            <div className="px-5 pb-5 border-t" style={{ borderColor: '#F8F5F3' }}>
-              <p className="text-sm mt-3 leading-relaxed font-semibold" style={{ color: '#8B8383' }}>
-                PrintBoxは、学校のプリントをスマートフォンで簡単に管理するアプリです。AI・OCR・外部サービスは一切使用していません。
-              </p>
-            </div>
-          )}
+
+            <button
+              onClick={() => setShowFontModal(false)}
+              className="w-full py-3 rounded-2xl font-bold text-sm text-white bg-[#C8847A] active:opacity-80 transition-all shadow-sm"
+            >
+              決定
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -177,15 +222,18 @@ function SettingsRow({
   sub,
   danger,
   disabled,
+  onClick,
 }: {
   icon: string;
   label: string;
   sub?: string;
   danger?: boolean;
   disabled?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
+      onClick={onClick}
       className="flex items-center gap-3 px-5 py-4 w-full text-left active:opacity-70 transition-all"
       style={{ opacity: disabled ? 0.4 : 1 }}
       disabled={disabled}

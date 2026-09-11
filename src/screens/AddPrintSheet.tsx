@@ -65,6 +65,7 @@ export default function AddPrintSheet({ folders, onAdd, onClose }: Props) {
       tags,
       createdAt: '2026-09-05',
     });
+    onClose(); // 保存後にシートを閉じる処理を追加
   }
 
   return (
@@ -304,12 +305,13 @@ export default function AddPrintSheet({ folders, onAdd, onClose }: Props) {
                   <input
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addTag()}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                     placeholder="タグを入力して Enter"
                     className="flex-1 px-4 py-2.5 rounded-2xl border text-sm font-semibold outline-none"
                     style={{ borderColor: '#F0EAE8', backgroundColor: '#F8F5F3', color: '#3F3939' }}
                   />
                   <button
+                    type="button"
                     onClick={addTag}
                     className="px-4 py-2.5 rounded-2xl text-white text-sm font-bold"
                     style={{ backgroundColor: '#C8847A' }}

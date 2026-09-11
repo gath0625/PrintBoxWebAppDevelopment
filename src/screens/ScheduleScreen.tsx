@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Folder as FolderIcon } from 'lucide-react';
 import type { Folder, Print, AppNotification, Route } from '../types';
 
 interface Props {
@@ -164,8 +165,9 @@ export default function ScheduleScreen({ folders, prints, navigate }: Props) {
                     <p className="font-bold text-sm truncate" style={{ color: '#3F3939' }}>
                       {print.title}
                     </p>
-                    <p className="text-xs mt-0.5" style={{ color: '#8B8383' }}>
-                      {folder?.icon} {folder?.name}
+                    <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: '#8B8383' }}>
+                      <FolderIcon size={12} />
+                      <span>{folder?.name}</span>
                     </p>
                   </div>
                   <div
@@ -217,8 +219,9 @@ export default function ScheduleScreen({ folders, prints, navigate }: Props) {
                     <p className="font-bold text-sm truncate" style={{ color: '#3F3939' }}>
                       {print.title}
                     </p>
-                    <p className="text-xs" style={{ color: '#8B8383' }}>
-                      {folder?.icon} {folder?.name}
+                    <p className="text-xs flex items-center gap-1" style={{ color: '#8B8383' }}>
+                      <FolderIcon size={12} />
+                      <span>{folder?.name}</span>
                     </p>
                   </div>
                   <span

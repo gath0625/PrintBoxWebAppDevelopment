@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Pencil, Trash2, Plus, Folder as FolderIcon } from 'lucide-react';
 import type { Folder, Print, AppNotification, Route } from '../types';
 
 interface Props {
@@ -12,7 +13,6 @@ interface Props {
   onDeleteFolder: (id: string) => void;
 }
 
-const FOLDER_ICONS = ['📖', '📐', '🔤', '🔬', '🌍', '📁', '🎨', '🎵', '⚽', '💻', '📝', '📊'];
 const FOLDER_COLORS = [
   '#FDECEA', '#EAF0FD', '#EAF8EE', '#FDF8EA', '#F0EAFD', '#F2F0EF',
   '#FDEEF8', '#EFF8FD', '#FDF3EA', '#EAFDF6',
@@ -29,12 +29,10 @@ export default function FolderScreen({
   const [showAddModal, setShowAddModal] = useState(false);
   const [editFolder, setEditFolder] = useState<Folder | null>(null);
   const [newName, setNewName] = useState('');
-  const [newIcon, setNewIcon] = useState('📁');
   const [newColor, setNewColor] = useState(FOLDER_COLORS[5]);
 
   function openAdd() {
     setNewName('');
-    setNewIcon('📁');
     setNewColor(FOLDER_COLORS[5]);
     setShowAddModal(true);
   }
@@ -42,7 +40,6 @@ export default function FolderScreen({
   function openEdit(f: Folder) {
     setEditFolder(f);
     setNewName(f.name);
-    setNewIcon(f.icon);
     setNewColor(f.color);
     setShowAddModal(true);
   }
@@ -50,12 +47,12 @@ export default function FolderScreen({
   function handleSave() {
     if (!newName.trim()) return;
     if (editFolder) {
-      onUpdateFolder({ ...editFolder, name: newName.trim(), icon: newIcon, color: newColor });
+      onUpdateFolder({ ...editFolder, name: newName.trim(), color: newColor });
     } else {
       onAddFolder({
         id: `f${Date.now()}`,
         name: newName.trim(),
-        icon: newIcon,
+        icon: '📁',
         color: newColor,
       });
     }
@@ -86,18 +83,20 @@ export default function FolderScreen({
         </div>
         <button
           onClick={openAdd}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-sm active:scale-95 transition-all"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-white shadow-sm active:scale-95 transition-all"
           style={{ backgroundColor: '#C8847A' }}
         >
-          +
+          <Plus size={20} />
         </button>
       </div>
 
       {/* Folder Grid */}
       {folders.length === 0 ? (
         <div className="px-5">
-          <div className="bg-white rounded-3xl p-10 shadow-sm text-center">
-            <p className="text-4xl mb-4">📂</p>
+          <div className="bg-white rounded-3xl p-10 shadow-sm text-center flex flex-col items-center">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-[#8B8383]" style={{ backgroundColor: '#F8F5F3' }}>
+              <FolderIcon size={32} />
+            </div>
             <p className="font-bold mb-1" style={{ color: '#3F3939' }}>
               フォルダがありません
             </p>
@@ -119,10 +118,10 @@ export default function FolderScreen({
                 className="w-full bg-white rounded-3xl p-5 shadow-sm text-left active:scale-95 transition-all"
               >
                 <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mb-3"
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 text-[#3F3939]"
                   style={{ backgroundColor: folder.color }}
                 >
-                  {folder.icon}
+                  <FolderIcon size={24} />
                 </div>
                 <p className="font-extrabold text-sm leading-tight" style={{ color: '#3F3939' }}>
                   {folder.name}
@@ -135,17 +134,17 @@ export default function FolderScreen({
               <div className="absolute top-3 right-3 flex gap-1">
                 <button
                   onClick={() => openEdit(folder)}
-                  className="w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center text-xs active:scale-95"
+                  className="w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center active:scale-95"
                   style={{ color: '#8B8383' }}
                 >
-                  ✏️
+                  <Pencil size={14} />
                 </button>
                 <button
                   onClick={() => handleDelete(folder.id)}
-                  className="w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center text-xs active:scale-95"
+                  className="w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center active:scale-95"
                   style={{ color: '#EF4444' }}
                 >
-                  🗑
+                  <Trash2 size={14} />
                 </button>
               </div>
             </div>
@@ -172,10 +171,10 @@ export default function FolderScreen({
             {/* Preview */}
             <div className="flex items-center gap-4 mb-5 p-4 rounded-2xl" style={{ backgroundColor: '#F8F5F3' }}>
               <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl"
+                className="w-14 h-14 rounded-2xl flex items-center justify-center text-[#3F3939]"
                 style={{ backgroundColor: newColor }}
               >
-                {newIcon}
+                <FolderIcon size={28} />
               </div>
               <p className="font-extrabold text-base" style={{ color: '#3F3939' }}>
                 {newName || 'フォルダ名'}
@@ -199,27 +198,6 @@ export default function FolderScreen({
                 }}
                 maxLength={20}
               />
-            </div>
-
-            {/* Icon picker */}
-            <div className="mb-4">
-              <label className="text-xs font-bold mb-2 block" style={{ color: '#8B8383' }}>
-                アイコン
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {FOLDER_ICONS.map((icon) => (
-                  <button
-                    key={icon}
-                    onClick={() => setNewIcon(icon)}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all"
-                    style={{
-                      backgroundColor: newIcon === icon ? '#C8847A' : '#F8F5F3',
-                    }}
-                  >
-                    {icon}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* Color picker */}
